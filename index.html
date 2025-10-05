@@ -145,8 +145,9 @@
 
                 data.forEach(item => {
                     const dateStr = item[0];
-                    const priceStr = item[1];
-                    if (typeof dateStr === 'string' && dateStr.length === 10 && typeof priceStr === 'string') {
+                    const priceStr = item[2]; // Corregido: Usar el precio de venta (índice 2)
+                    // La API de Ámbito puede devolver la fecha con '-' o con '/'.
+                    if (typeof dateStr === 'string' && (dateStr.includes('-') || dateStr.includes('/')) && typeof priceStr === 'string') {
                         labels.push(dateStr);
                         prices.push(parseFloat(priceStr.replace(',', '.')));
                     }
@@ -183,31 +184,50 @@
                 let data = await response.json();
                 data.shift(); 
 
+                // console.log("Datos mensuales crudos de la API:", data); // Descomentar para depuración profunda
+
+                // Procesamos los datos diarios para agruparlos por mes y calcular el promedio.
                 const monthlyData = data.reduce((acc, item) => {
-                    if (!Array.isArray(item) || item.length < 2 || typeof item[0] !== 'string' || typeof item[1] !== 'string') {
+                    // Verificación de seguridad para cada registro de la API.
+                    if (!Array.isArray(item) || item.length < 3 || typeof item[0] !== 'string' || typeof item[2] !== 'string') {
+                        console.warn("Item de dato inválido, omitiendo:", item);
                         return acc; 
                     }
-                    const dateStr = item[0];
-                    const priceStr = item[1];
-                    const parts = dateStr.split('-');
+                    
+                    const dateStr = item[0]; // Formato: "DD-MM-YYYY"
+                    const priceStr = item[2]; // Precio de venta
+                    // La API de Ámbito puede devolver la fecha con '-' o con '/', así que usamos una regex para el split.
+                    const parts = dateStr.split(/[-/]/);
 
+                    // Aseguramos que la fecha tenga el formato esperado.
                     if (parts.length === 3) {
-                        const month = parts[1]; // MM
-                        const year = parts[2];  // YYYY
+                        const day = parts[0];
+                        const month = parts[1];
+                        const year = parts[2];
+                        
+                        // Creamos una clave única para cada mes en el formato "YYYY-MM".
                         const key = `${year}-${month}`;
                         const value = parseFloat(priceStr.replace(',', '.'));
 
+                        // Si el valor es un número válido, lo agregamos a nuestro acumulador.
                         if (!isNaN(value)) {
                             if (!acc[key]) {
-                                acc[key] = { sum: 0, count: 0 };
+                                acc[key] = { sum: 0, count: 0, monthName: '' };
                             }
                             acc[key].sum += value;
                             acc[key].count++;
+                        } else {
+                            console.warn(`Valor de precio no válido para la fecha ${dateStr}:`, priceStr);
                         }
+                    } else {
+                        console.warn(`Formato de fecha inesperado, omitiendo: ${dateStr}`);
                     }
                     return acc;
                 }, {});
                 
+                // console.log("Datos procesados y agrupados por mes:", monthlyData); // Descomentar para depuración
+
+                // Ordenamos las claves (YYYY-MM) para que el gráfico se muestre en orden cronológico.
                 const sortedKeys = Object.keys(monthlyData).sort();
 
                 const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
@@ -219,8 +239,10 @@
                     return `${monthName} '${shortYear}`;
                 });
                 
+                // Calculamos el precio promedio para cada mes.
                 const prices = sortedKeys.map(key => monthlyData[key].sum / monthlyData[key].count);
 
+                // Si tenemos datos, creamos el gráfico. Si no, lanzamos un error.
                 if (labels.length > 0) {
                     createMonthlyChart(labels, prices);
                 } else {
@@ -293,7 +315,8 @@
                             callback: function(value) {
                                 const label = this.getLabelForValue(value);
                                 if (isDailyChart && typeof label === 'string') {
-                                    const parts = label.split('-');
+                                    // La fecha puede venir con '-' o '/', usamos una regex para ser flexibles.
+                                    const parts = label.split(/[-/]/);
                                     if(parts.length === 3) return `${parts[0]}/${parts[1]}`;
                                 }
                                 return label;
