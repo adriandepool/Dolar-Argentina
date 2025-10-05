@@ -1,6 +1,6 @@
 # Dashboard Económico Argentina 🇦🇷💲
 
-Un **dashboard web simple y moderno** que muestra en tiempo real las principales cotizaciones del dólar en Argentina y su evolución histórica.  
+Un **dashboard web simple ** que muestra en tiempo real las principales cotizaciones del dólar en Argentina y su evolución histórica.  
 Este proyecto fue creado con el objetivo de **practicar el consumo de APIs externas** y la **visualización de datos**.
 
 ➡️ **[Ver Demo en Vivo](https://adriandepool.github.io/Dolar-Argentina/)**
@@ -27,4 +27,21 @@ Este proyecto fue construido utilizando únicamente tecnologías frontend, sin n
 
 ---
 
-##
+## 🌐 Fuentes de Datos (APIs)
+
+- **Cotizaciones Actuales:** [DolarAPI](https://dolarapi.com/)  
+- **Datos Históricos:** [Ámbito Financiero](https://www.ambito.com/)
+
+---
+
+## ⚙️ Uso
+
+No se requiere instalación.  
+Simplemente abre el archivo `index.html` en tu navegador o accede a la demo en vivo a través de **GitHub Pages**.
+
+---
+
+## 👨‍💻 Autor
+
+Proyecto desarrollado por **Adrián Reyes**.  
+Si te gustó este proyecto, no dudes en dejar una ⭐ en el repositorio.
