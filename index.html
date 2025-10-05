@@ -172,7 +172,6 @@
         
         async function fetchMonthlyChartData() {
             try {
-                console.log("--- DIAGNÓSTICO GRÁFICO MENSUAL ---");
                 const endDate = new Date();
                 const startDate = new Date();
                 startDate.setFullYear(endDate.getFullYear() - 1);
@@ -182,38 +181,36 @@
                 if (!response.ok) throw new Error('La API mensual no respondió correctamente.');
                 
                 let data = await response.json();
-                console.log(`1. Datos crudos de la API: ${data.length} registros.`);
-                data.shift(); // Quitar cabecera
+                data.shift(); 
 
-                const monthlyData = {};
-                const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-
-                data.forEach(item => {
+                const monthlyData = data.reduce((acc, item) => {
+                    if (!Array.isArray(item) || item.length < 2 || typeof item[0] !== 'string' || typeof item[1] !== 'string') {
+                        return acc; 
+                    }
                     const dateStr = item[0];
                     const priceStr = item[1];
-                    
-                    if (typeof dateStr === 'string' && dateStr.length === 10 && typeof priceStr === 'string') {
-                        const parts = dateStr.split('-');
-                        if (parts.length === 3) {
-                            const month = parts[1];
-                            const year = parts[2];
-                            const key = `${year}-${month}`;
-                            const value = parseFloat(priceStr.replace(',', '.'));
+                    const parts = dateStr.split('-');
 
-                            if (!monthlyData[key]) {
-                                monthlyData[key] = { sum: 0, count: 0 };
+                    if (parts.length === 3) {
+                        const month = parts[1]; // MM
+                        const year = parts[2];  // YYYY
+                        const key = `${year}-${month}`;
+                        const value = parseFloat(priceStr.replace(',', '.'));
+
+                        if (!isNaN(value)) {
+                            if (!acc[key]) {
+                                acc[key] = { sum: 0, count: 0 };
                             }
-                            monthlyData[key].sum += value;
-                            monthlyData[key].count++;
+                            acc[key].sum += value;
+                            acc[key].count++;
                         }
                     }
-                });
+                    return acc;
+                }, {});
                 
-                console.log("2. Datos procesados y agrupados por mes:", monthlyData);
-
                 const sortedKeys = Object.keys(monthlyData).sort();
-                console.log("3. Claves de meses, ordenadas:", sortedKeys);
 
+                const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
                 const labels = sortedKeys.map(key => {
                     const [year, month] = key.split('-');
                     const monthIndex = parseInt(month, 10) - 1;
@@ -223,8 +220,6 @@
                 });
                 
                 const prices = sortedKeys.map(key => monthlyData[key].sum / monthlyData[key].count);
-
-                console.log("4. Datos finales para dibujar el gráfico:", { labels, prices });
 
                 if (labels.length > 0) {
                     createMonthlyChart(labels, prices);
@@ -331,5 +326,3 @@
     </script>
 </body>
 </html>
-
-
