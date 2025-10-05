@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolar Hoy en Argentina</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Usamos la fuente Inter que importamos */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Pequeño ajuste para que el gráfico no se desborde en móviles */
+        .chart-container {
+            position: relative;
+            height: 60vh; /* Altura relativa al viewport */
+            width: 100%;
+            max-width: 900px; /* Ancho máximo para el gráfico */
+            margin: auto;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white antialiased">
+
+    <div class="container mx-auto p-4 md:p-8">
+        
+        <!-- Header -->
+        <header class="text-center mb-8 md:mb-12">
+            <h1 class="text-3xl md:text-5xl font-bold text-cyan-400 mb-2">Dolar Hoy en Argentina</h1>
+            <p class="text-gray-400">Cotizaciones del dólar actualizadas en tiempo real.</p>
+        </header>
+
+        <!-- Contenedor de las tarjetas de cotizaciones (AHORA CON 3 COLUMNAS) -->
+        <main id="cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12">
+            <!-- El contenido de las tarjetas se generará con JavaScript -->
+            <!-- Placeholder de Carga -->
+            <div id="loading-cards" class="md:col-span-3 text-center text-gray-400 py-10">
+                <svg class="animate-spin h-8 w-8 text-cyan-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-2">Cargando cotizaciones...</p>
+            </div>
+        </main>
+        
+        <!-- Sección del Gráfico -->
+        <section class="bg-gray-800 p-4 md:p-6 rounded-xl shadow-2xl border border-gray-700">
+            <h2 class="text-xl md:text-2xl font-bold mb-4 text-center">Evolución Dólar Blue (Últimos 30 días)</h2>
+            <div id="loading-chart" class="text-center text-gray-400 py-10">
+                 <svg class="animate-spin h-8 w-8 text-cyan-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-2">Cargando datos históricos...</p>
+            </div>
+            <div class="chart-container" id="chart-wrapper" style="display: none;">
+                <canvas id="dolarChart"></canvas>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // --- CONSTANTES Y REFERENCIAS AL DOM ---
+        const cardsContainer = document.getElementById('cards-container');
+        const loadingCards = document.getElementById('loading-cards');
+        const loadingChart = document.getElementById('loading-chart');
+        const chartWrapper = document.getElementById('chart-wrapper');
+        const chartCanvas = document.getElementById('dolarChart');
+        let dolarChartInstance = null; // Variable para guardar la instancia del gráfico
+
+        // --- FUNCIONES PARA FORMATEAR DATOS ---
+
+        /**
+         * Formatea un número al formato de moneda ARS.
+         * @param {number} value - El número a formatear.
+         * @returns {string} - El número formateado como moneda.
+         */
+        function formatCurrency(value) {
+            if (value === null || typeof value === 'undefined') return 'No disponible';
+            return value.toLocaleString('es-AR', {
+                style: 'currency',
+                currency: 'ARS',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        /**
+         * Formatea una fecha ISO a un formato legible.
+         * @param {string} dateString - La fecha en formato ISO.
+         * @returns {string} - La fecha formateada.
+         */
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('es-AR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+         /**
+         * Formatea una fecha 'YYYY-MM-DD' a 'DD/MM'.
+         * @param {string} dateString - La fecha en formato YYYY-MM-DD.
+         * @returns {string} - La fecha formateada como DD/MM.
+         */
+        function formatShortDate(dateString) {
+            const [year, month, day] = dateString.split('-');
+            return `${day}/${month}`;
+        }
+
+
+        // --- LÓGICA PRINCIPAL ---
+
+        /**
+         * Obtiene y muestra las cotizaciones actuales del dólar.
+         */
+        async function fetchDolarData() {
+            try {
+                const response = await fetch('https://dolarapi.com/v1/dolares');
+                if (!response.ok) throw new Error('La respuesta de la red no fue satisfactoria.');
+                
+                const data = await response.json();
+
+                // Limpiamos el contenedor de tarjetas antes de agregar las nuevas
+                cardsContainer.innerHTML = '';
+
+                // Filtramos para no mostrar el dólar "Tarjeta" que a veces no trae valores
+                const filteredData = data.filter(dolar => dolar.casa !== 'tarjeta');
+
+                filteredData.forEach(dolar => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 transform hover:scale-105 transition-transform duration-300';
+                    
+                    // Determinar qué valores mostrar
+                    const compra = dolar.compra;
+                    const venta = dolar.venta;
+                    
+                    card.innerHTML = `
+                        <h2 class="text-xl font-bold text-cyan-400 capitalize">${dolar.nombre}</h2>
+                        <div class="mt-4 text-lg">
+                            <p class="text-gray-300">Compra: <span class="font-semibold text-green-400">${formatCurrency(compra)}</span></p>
+                            <p class="text-gray-300">Venta: <span class="font-semibold text-red-400">${formatCurrency(venta)}</span></p>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-4">Actualizado: ${formatDate(dolar.fechaActualizacion)}</p>
+                    `;
+                    cardsContainer.appendChild(card);
+                });
+
+            } catch (error) {
+                console.error("Error al obtener las cotizaciones:", error);
+                cardsContainer.innerHTML = `<p class="text-red-500 col-span-full text-center">No se pudieron cargar las cotizaciones. Intenta de nuevo más tarde.</p>`;
+            } finally {
+                if (loadingCards) {
+                    loadingCards.style.display = 'none';
+                }
+            }
+        }
+
+        /**
+         * Obtiene los datos históricos y crea el gráfico.
+         */
+        async function fetchChartData() {
+            try {
+                // Bluelytics devuelve los últimos 365 días por defecto, lo cortamos a 30.
+                const response = await fetch('https://api.bluelytics.com.ar/v2/evolution.json');
+                if (!response.ok) throw new Error('La respuesta de la red no fue satisfactoria para el gráfico.');
+
+                const data = await response.json();
+                
+                // Obtenemos solo los últimos 30 días y los datos del blue
+                const last30Days = data.filter(d => d.source === 'Blue').slice(-30);
+
+                const labels = last30Days.map(item => formatShortDate(item.date));
+                const prices = last30Days.map(item => item.value_sell);
+                
+                createChart(labels, prices);
+                
+            } catch (error) {
+                console.error("Error al obtener los datos para el gráfico:", error);
+                loadingChart.innerHTML = `<p class="text-red-500 text-center">No se pudo cargar el gráfico.</p>`;
+            } finally {
+                // Ocultamos el spinner de carga del gráfico y mostramos el contenedor del gráfico
+                loadingChart.style.display = 'none';
+                chartWrapper.style.display = 'block';
+            }
+        }
+        
+        /**
+         * Crea una instancia del gráfico de Chart.js.
+         * @param {string[]} labels - Las etiquetas para el eje X (fechas).
+         * @param {number[]} data - Los datos para el eje Y (precios).
+         */
+        function createChart(labels, data) {
+            const ctx = chartCanvas.getContext('2d');
+            
+            // Si ya existe un gráfico, lo destruimos antes de crear uno nuevo
+            if (dolarChartInstance) {
+                dolarChartInstance.destroy();
+            }
+
+            dolarChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Valor de Venta Dólar Blue',
+                        data: data,
+                        borderColor: 'rgb(34, 211, 238)', // Color cian de Tailwind
+                        backgroundColor: 'rgba(34, 211, 238, 0.2)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgb(34, 211, 238)',
+                        tension: 0.1, // Suaviza la línea
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false, // El eje Y no empieza en cero para ver mejor la variación
+                            ticks: {
+                                color: '#9ca3af', // Color de texto gris de Tailwind
+                                callback: function(value) {
+                                    return '$' + value; // Agrega el signo $ a los ticks
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)' // Líneas de la grilla más sutiles
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#9ca3af'
+                            },
+                             grid: {
+                                display: false // Ocultamos la grilla vertical
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#d1d5db' // Color de texto gris claro para la leyenda
+                            }
+                        },
+                        tooltip: {
+                             callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += formatCurrency(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- INICIALIZACIÓN ---
+        // Se ejecuta cuando el DOM está completamente cargado.
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchDolarData();
+            fetchChartData();
+        });
+    </script>
+</body>
+</html>
+
+
