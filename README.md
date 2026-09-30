@@ -1,47 +1,83 @@
-# Dashboard con valor del dolar en Argentina 🇦🇷💲
+# Dólar Argentina 🇦🇷 💵
 
-Un dashboard web simple que muestra en tiempo real las principales cotizaciones del dólar en Argentina y su evolución histórica.  
-Este proyecto fue creado con el objetivo de **practicar el consumo de APIs externas** y la **visualización de datos**.
+Dashboard financiero en tiempo real para el seguimiento de las cotizaciones del dólar en Argentina, análisis histórico interactivo, calculadora de conversión y sistema de alertas sonoras y de escritorio por umbrales de precio.
 
 ➡️ **[Ver Demo en Vivo](https://adriandepool.github.io/Dolar-Argentina/)**
 
 ---
 
-## 🚀 Funcionalidades
+## ✨ Novedades y Características
 
-- **Cotizaciones en Tiempo Real:** Muestra los valores de compra y venta de las principales variantes del dólar (Oficial, Blue, MEP, CCL).  
-- **Gráfico de Evolución Diaria:** Visualiza la fluctuación del Dólar Blue durante los últimos 30 días en un gráfico de líneas.  
-- **Gráfico de Evolución Mensual:** Muestra el promedio mensual del Dólar Blue durante el último año en un gráfico de barras, permitiendo ver la tendencia a largo plazo.  
-- **Diseño Responsivo:** La interfaz se adapta correctamente a dispositivos móviles, tablets y computadoras de escritorio.
-
----
-
-## 🔧 Tecnologías Utilizadas
-
-Este proyecto fue construido utilizando únicamente tecnologías frontend, sin necesidad de un backend propio.
-
-- **HTML5**  
-- **Tailwind CSS:** Para un diseño rápido y moderno.  
-- **JavaScript (Vanilla):** Para toda la lógica de la aplicación, incluyendo las llamadas a las APIs y la manipulación del DOM.  
-- **Chart.js:** Para la creación de los gráficos dinámicos.
-
----
-
-## 🌐 Fuentes de Datos (APIs)
-
-- **Cotizaciones Actuales:** [DolarAPI](https://dolarapi.com/)  
-- **Datos Históricos:** [Ámbito Financiero](https://www.ambito.com/)
+- ⚡ **Cotizaciones en Tiempo Real:** Valores de compra y venta actualizados para Dólar Oficial, Blue, MEP (Bolsa), CCL (Contado con Liquidación), Mayorista, Cripto y Tarjeta.
+- 🔔 **Sistema de Alertas Inteligente:**
+  - Configura alertas para cuando cualquier dólar **suba de un valor** o **baje de un valor**.
+  - Avisos sonoros mediante Web Audio API (chime financiero) y notificaciones de escritorio nativas (Web Notifications API).
+  - Almacenamiento persistente en `localStorage`.
+- 📈 **Gráfico Histórico Interactivo:**
+  - Alterna dinámicamente entre Dólar Blue, Oficial y MEP.
+  - Filtros de período: **30 Días**, **3 Meses** o **1 Año**.
+  - Tarjetas con métricas instantáneas del período: Mínimo, Máximo, Promedio y Variación porcentual (%).
+- 🧮 **Calculadora / Conversor de Moneda:**
+  - Conversión bidireccional inmediata (USD ↔ ARS).
+  - Comparativa simultánea de rendimiento frente a todos los tipos de cambio.
+- 🛡️ **Protección contra Rate Limits (Costo $0):**
+  - Polling programado (cada 2 minutos) con temporizador visual y botón de refresco manual con debounce.
+  - Caché local con TTL (Time-To-Live).
+  - **Page Visibility API:** Pausa las consultas si el usuario minimiza o cambia de pestaña para no saturar la API ni consumir recursos.
+- 🚀 **Despliegue Automático con GitHub Actions:**
+  - Cada `git push` a `main` compila y publica automáticamente en GitHub Pages sin servicios de terceros ni costos.
 
 ---
 
-## ⚙️ Uso
+## 🛠️ Stack Tecnológico
 
-No se requiere instalación.  
-Simplemente abre el archivo `index.html` en tu navegador o accede a la demo en vivo a través de **GitHub Pages**.
+- **Framework:** [React 18](https://react.dev/) + [Vite 6](https://vitejs.dev/)
+- **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
+- **Estilos:** [Tailwind CSS v3](https://tailwindcss.com/)
+- **Iconografía:** [Lucide React](https://lucide.dev/)
+- **Gráficos:** [Chart.js](https://www.chartjs.org/) + [react-chartjs-2](https://react-chartjs-2.js.org/)
+- **CI/CD:** [GitHub Actions](https://github.com/features/actions) con despliegue a **GitHub Pages**
+
+---
+
+## 🌐 Fuentes de Datos
+
+- **Cotizaciones en Vivo:** [DolarAPI](https://dolarapi.com/)
+- **Series Históricas:** [Ámbito Financiero](https://www.ambito.com/)
+
+---
+
+## 💻 Desarrollo Local
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/adriandepool/Dolar-Argentina.git
+cd Dolar-Argentina
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Iniciar servidor de desarrollo
+npm run dev
+```
+
+Abre tu navegador en `http://localhost:5173`.
+
+---
+
+## 🚀 Despliegue en GitHub Pages
+
+El proyecto incluye el flujo de trabajo automatizado en `.github/workflows/deploy.yml`.
+
+Para activarlo en tu repositorio:
+1. En GitHub, ve a **Settings** de tu repositorio.
+2. En el menú izquierdo, haz clic en **Pages**.
+3. En la sección **Build and deployment** > **Source**, selecciona **GitHub Actions** en lugar de "Deploy from a branch".
+4. ¡Listo! Cada vez que hagas `git push main`, GitHub Actions compilará la aplicación y la publicará automáticamente.
 
 ---
 
 ## 👨‍💻 Autor
 
-Proyecto desarrollado por **Adrián Reyes**.  
-Si te gustó este proyecto, no dudes en dejar una ⭐ en el repositorio.
+Proyecto desarrollado y modernizado por **Adrián Reyes**.  
+Si te resulta útil, ¡no dudes en dejar una ⭐ en el repositorio!
