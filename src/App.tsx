@@ -31,6 +31,27 @@ export function App() {
   const [modalInitialCasa, setModalInitialCasa] = useState<string | undefined>();
   const [modalInitialPrice, setModalInitialPrice] = useState<number | undefined>();
   const [activeToast, setActiveToast] = useState<{ message: string; type: 'success' | 'alert' } | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  // Escuchar evento de instalación PWA
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice?.outcome === 'accepted') {
+      showToast('¡Aplicación instalada con éxito!');
+    }
+    setDeferredPrompt(null);
+  };
 
   const lastFetchTimeRef = useRef<number>(Date.now());
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -184,6 +205,8 @@ export function App() {
           setIsAlertsModalOpen(true);
         }}
         onScrollToConverter={handleScrollToConverter}
+        onInstallApp={handleInstallApp}
+        canInstallApp={!!deferredPrompt}
       />
 
       {/* Notificación Toast Flotante */}

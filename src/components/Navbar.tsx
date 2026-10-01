@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, RefreshCw, Clock, ArrowRightLeft, Sparkles } from 'lucide-react';
+import { Bell, RefreshCw, Clock, ArrowRightLeft, Sparkles, DollarSign, Download } from 'lucide-react';
 
 interface NavbarProps {
   countdown: number;
@@ -8,6 +8,8 @@ interface NavbarProps {
   activeAlertsCount: number;
   onOpenAlerts: () => void;
   onScrollToConverter: () => void;
+  onInstallApp?: () => void;
+  canInstallApp?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -17,6 +19,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeAlertsCount,
   onOpenAlerts,
   onScrollToConverter,
+  onInstallApp,
+  canInstallApp,
 }) => {
   const formatCountdown = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -33,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center space-x-3">
             <div className="relative">
               <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 ring-1 ring-white/20">
-                <span className="text-xl sm:text-2xl select-none">🇦🇷</span>
+                <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <span className="absolute -top-1 -right-1 flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -72,6 +76,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-cyan-400' : ''}`} />
               </button>
             </div>
+
+            {/* Botón Instalar App (PWA) */}
+            {canInstallApp && onInstallApp && (
+              <button
+                onClick={onInstallApp}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition-all hover:border-emerald-500/50"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Instalar</span>
+              </button>
+            )}
 
             {/* Acceso a Calculadora */}
             <button

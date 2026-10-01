@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Github, ExternalLink } from 'lucide-react';
+import { Github, ExternalLink, Code2 } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
@@ -8,8 +8,8 @@ export const Footer: React.FC = () => {
         
         {/* Info y créditos */}
         <div className="text-center md:text-left space-y-1">
-          <p className="flex items-center justify-center md:justify-start gap-1 text-slate-300 font-medium">
-            Desarrollado con <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" /> por{' '}
+          <p className="flex items-center justify-center md:justify-start gap-1.5 text-slate-300 font-medium">
+            Desarrollado por{' '}
             <a
               href="https://github.com/adriandepool"
               target="_blank"
