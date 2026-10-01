@@ -43,14 +43,57 @@ export const fetchDolarRates = async (forceRefresh = false): Promise<{ rates: Do
   const oficial = rawData.find(d => d.casa.toLowerCase() === 'oficial');
   const oficialVenta = oficial ? oficial.venta : 0;
 
+  // Manejo de baseline diario para calcular variación intradía
+  const todayStr = new Date().toISOString().slice(0, 10);
+  let baselineMap: Record<string, number> = {};
+
+  try {
+    const savedBaseline = localStorage.getItem('dolar_daily_baseline_v2');
+    if (savedBaseline) {
+      const parsed = JSON.parse(savedBaseline);
+      if (parsed.date === todayStr) {
+        baselineMap = parsed.prices || {};
+      }
+    }
+  } catch (e) {
+    console.warn('Error leyendo baseline de precios:', e);
+  }
+
+  // Si no hay baseline para hoy, guardamos las cotizaciones actuales como base de apertura
+  if (Object.keys(baselineMap).length === 0) {
+    rawData.forEach(r => {
+      baselineMap[r.casa.toLowerCase()] = r.venta;
+    });
+    try {
+      localStorage.setItem('dolar_daily_baseline_v2', JSON.stringify({
+        date: todayStr,
+        prices: baselineMap,
+      }));
+    } catch (e) {
+      console.warn('Error guardando baseline:', e);
+    }
+  }
+
   const processedRates: DolarRate[] = rawData.map(rate => {
     let brecha = 0;
     if (oficialVenta > 0 && rate.casa.toLowerCase() !== 'oficial') {
       brecha = ((rate.venta - oficialVenta) / oficialVenta) * 100;
     }
+
+    const basePrice = baselineMap[rate.casa.toLowerCase()];
+    let variacionMonto = 0;
+    let variacionPct = 0;
+
+    if (basePrice && basePrice > 0) {
+      variacionMonto = rate.venta - basePrice;
+      variacionPct = (variacionMonto / basePrice) * 100;
+    }
+
     return {
       ...rate,
       brechaConOficial: Number(brecha.toFixed(1)),
+      variacionMonto: Number(variacionMonto.toFixed(2)),
+      variacionPct: Number(variacionPct.toFixed(2)),
     };
   });
 

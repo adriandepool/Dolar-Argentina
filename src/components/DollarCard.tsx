@@ -1,12 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DolarRate } from '../types';
-import { BellPlus, TrendingUp, DollarSign, GripVertical, EyeOff } from 'lucide-react';
+import {
+  BellPlus,
+  TrendingUp,
+  DollarSign,
+  GripVertical,
+  EyeOff,
+  Copy,
+  Check,
+  ArrowUpRight,
+  ArrowDownRight,
+} from 'lucide-react';
 
 interface DollarCardProps {
   rate: DolarRate;
   onSetAlert: (casa: string, nombre: string, currentPrice: number) => void;
   onSelectForConvert: (casa: string) => void;
   onHideCard?: (casa: string) => void;
+  onCopyPrice?: (val: number, type: 'Compra' | 'Venta', nombre: string) => void;
   isPopular?: boolean;
   // Drag and Drop props
   isDragging?: boolean;
@@ -21,6 +32,7 @@ export const DollarCard: React.FC<DollarCardProps> = ({
   onSetAlert,
   onSelectForConvert,
   onHideCard,
+  onCopyPrice,
   isPopular,
   isDragging,
   onDragStart,
@@ -28,6 +40,8 @@ export const DollarCard: React.FC<DollarCardProps> = ({
   onDragEnter,
   onDragEnd,
 }) => {
+  const [copiedType, setCopiedType] = useState<'compra' | 'venta' | null>(null);
+
   const formatCurrency = (val: number | null) => {
     if (val === null || typeof val === 'undefined') return '—';
     return val.toLocaleString('es-AR', {
@@ -45,6 +59,19 @@ export const DollarCard: React.FC<DollarCardProps> = ({
     } catch {
       return 'Reciente';
     }
+  };
+
+  const handleCopy = (e: React.MouseEvent, val: number | null, type: 'Compra' | 'Venta') => {
+    e.stopPropagation();
+    if (val === null || typeof val === 'undefined') return;
+
+    navigator.clipboard.writeText(val.toString());
+    setCopiedType(type.toLowerCase() as 'compra' | 'venta');
+    onCopyPrice?.(val, type, rate.nombre);
+
+    setTimeout(() => {
+      setCopiedType(null);
+    }, 2000);
   };
 
   // Color temático según el tipo de dólar
@@ -116,19 +143,19 @@ export const DollarCard: React.FC<DollarCardProps> = ({
       />
 
       <div>
-        {/* Cabecera de la tarjeta con Grip y Botones de Acción */}
+        {/* Cabecera de la tarjeta con Grip y Acciones */}
         <div className="flex items-start justify-between gap-2 mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-start gap-2">
             {/* Grip handle visual */}
             <span
               title="Arrastra para reordenar esta cotización"
-              className="text-slate-600 group-hover:text-slate-400 transition-colors p-0.5 cursor-grab"
+              className="text-slate-600 group-hover:text-slate-400 transition-colors p-0.5 cursor-grab mt-0.5"
             >
               <GripVertical className="w-4 h-4" />
             </span>
 
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${scheme.badge}`}>
                   Dólar {rate.nombre}
                 </span>
@@ -137,7 +164,27 @@ export const DollarCard: React.FC<DollarCardProps> = ({
                     ★ Popular
                   </span>
                 )}
+                {/* Variación Diaria */}
+                {rate.variacionPct !== undefined && rate.variacionPct !== 0 && (
+                  <span
+                    className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      rate.variacionPct > 0
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    }`}
+                    title={`Variación del día: ${rate.variacionMonto && rate.variacionMonto > 0 ? '+' : ''}$${rate.variacionMonto}`}
+                  >
+                    {rate.variacionPct > 0 ? (
+                      <ArrowUpRight className="w-3 h-3" />
+                    ) : (
+                      <ArrowDownRight className="w-3 h-3" />
+                    )}
+                    {rate.variacionPct > 0 ? '+' : ''}
+                    {rate.variacionPct}%
+                  </span>
+                )}
               </div>
+
               {rate.brechaConOficial !== undefined && rate.brechaConOficial > 0 && (
                 <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
                   <TrendingUp className="w-3 h-3 text-cyan-400 inline" />
@@ -177,25 +224,55 @@ export const DollarCard: React.FC<DollarCardProps> = ({
           </div>
         </div>
 
-        {/* Precios Principales (Compra y Venta) */}
-        <div className="grid grid-cols-2 gap-3 my-3 p-3.5 rounded-xl bg-slate-900/80 border border-slate-800/80">
-          <div>
-            <span className="block text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">
-              Compra
-            </span>
+        {/* Precios Principales (Compra y Venta) - Copiables con 1 clic */}
+        <div className="grid grid-cols-2 gap-3 my-3 p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
+          
+          {/* Bloque Compra */}
+          <div
+            onClick={e => handleCopy(e, rate.compra, 'Compra')}
+            title="Clic para copiar precio de compra"
+            className="group/copy relative p-2 rounded-lg hover:bg-slate-800/80 transition-all cursor-pointer active:scale-95"
+          >
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="block text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                Compra
+              </span>
+              <span className="text-slate-500 group-hover/copy:text-slate-300 transition-colors">
+                {copiedType === 'compra' ? (
+                  <Check className="w-3 h-3 text-emerald-400" />
+                ) : (
+                  <Copy className="w-3 h-3 opacity-0 group-hover/copy:opacity-100 transition-opacity" />
+                )}
+              </span>
+            </div>
             <span className="text-base sm:text-lg font-bold text-slate-200 font-mono tracking-tight">
               {formatCurrency(rate.compra)}
             </span>
           </div>
 
-          <div className="border-l border-slate-800 pl-3">
-            <span className="block text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">
-              Venta
-            </span>
+          {/* Bloque Venta */}
+          <div
+            onClick={e => handleCopy(e, rate.venta, 'Venta')}
+            title="Clic para copiar precio de venta"
+            className="group/copy relative p-2 rounded-lg hover:bg-slate-800/80 transition-all cursor-pointer active:scale-95 border-l border-slate-800 pl-3"
+          >
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="block text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                Venta
+              </span>
+              <span className="text-slate-500 group-hover/copy:text-slate-300 transition-colors">
+                {copiedType === 'venta' ? (
+                  <Check className="w-3 h-3 text-emerald-400" />
+                ) : (
+                  <Copy className="w-3 h-3 opacity-0 group-hover/copy:opacity-100 transition-opacity" />
+                )}
+              </span>
+            </div>
             <span className={`text-lg sm:text-xl font-extrabold ${scheme.accent} font-mono tracking-tight`}>
               {formatCurrency(rate.venta)}
             </span>
           </div>
+
         </div>
       </div>
 

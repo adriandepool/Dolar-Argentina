@@ -7,6 +7,8 @@ export interface DolarRate {
   fechaActualizacion: string;
   // Campos calculados
   variacion24h?: number;
+  variacionMonto?: number;
+  variacionPct?: number;
   brechaConOficial?: number;
 }
 

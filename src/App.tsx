@@ -7,6 +7,7 @@ import { HistoricalChart } from './components/HistoricalChart';
 import { Converter } from './components/Converter';
 import { AlertsModal } from './components/AlertsModal';
 import { CustomizeModal } from './components/CustomizeModal';
+import { MarketTicker } from './components/MarketTicker';
 import { Footer } from './components/Footer';
 import { AlertCircle, CheckCircle, BellRing, SlidersHorizontal, RotateCcw } from 'lucide-react';
 
@@ -313,6 +314,9 @@ export function App() {
         canInstallApp={!!deferredPrompt}
       />
 
+      {/* Ticker de Indicadores Macroeconómicos & Compartir */}
+      <MarketTicker rates={rates} onShowToast={showToast} />
+
       {/* Notificación Toast Flotante */}
       {activeToast && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 bg-slate-900/95 border border-cyan-500/40 text-white rounded-xl shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-5 duration-300">
@@ -412,6 +416,9 @@ export function App() {
                   onSetAlert={handleOpenAlertForCard}
                   onSelectForConvert={handleScrollToConverter}
                   onHideCard={handleHideCard}
+                  onCopyPrice={(val, type, nombre) =>
+                    showToast(`Dólar ${nombre} (${type}): $${val.toLocaleString('es-AR')} copiado al portapapeles.`)
+                  }
                   isDragging={draggedCasa === rate.casa.toLowerCase()}
                   onDragStart={handleDragStart}
                   onDragOver={handleDragOver}
