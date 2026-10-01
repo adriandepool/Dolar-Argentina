@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { DolarRate, PriceAlert } from './types';
 import { fetchDolarRates, evaluateAlerts } from './services/dolarApi';
 import { Navbar } from './components/Navbar';
@@ -6,11 +6,19 @@ import { DollarCard } from './components/DollarCard';
 import { HistoricalChart } from './components/HistoricalChart';
 import { Converter } from './components/Converter';
 import { AlertsModal } from './components/AlertsModal';
+import { CustomizeModal } from './components/CustomizeModal';
 import { Footer } from './components/Footer';
-import { AlertCircle, CheckCircle, BellRing } from 'lucide-react';
+import { AlertCircle, CheckCircle, BellRing, SlidersHorizontal, RotateCcw } from 'lucide-react';
 
 const REFRESH_INTERVAL_SECONDS = 120; // 2 minutos
 const ALERTS_STORAGE_KEY = 'dolar_argentina_alerts_v1';
+const CARD_PREFS_KEY = 'dolar_card_preferences_v2';
+const DEFAULT_ORDER = ['blue', 'oficial', 'bolsa', 'contadoconliqui', 'cripto', 'mayorista', 'tarjeta'];
+
+interface CardPrefs {
+  order: string[];
+  hidden: string[];
+}
 
 export function App() {
   const [rates, setRates] = useState<DolarRate[]>([]);
@@ -18,6 +26,7 @@ export function App() {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number>(REFRESH_INTERVAL_SECONDS);
+  
   const [alerts, setAlerts] = useState<PriceAlert[]>(() => {
     try {
       const saved = localStorage.getItem(ALERTS_STORAGE_KEY);
@@ -27,7 +36,19 @@ export function App() {
     }
   });
 
+  const [cardPrefs, setCardPrefs] = useState<CardPrefs>(() => {
+    try {
+      const saved = localStorage.getItem(CARD_PREFS_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // fallback
+    }
+    return { order: DEFAULT_ORDER, hidden: [] };
+  });
+
+  const [draggedCasa, setDraggedCasa] = useState<string | null>(null);
   const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
+  const [isCustomizeModalOpen, setIsCustomizeModalOpen] = useState(false);
   const [modalInitialCasa, setModalInitialCasa] = useState<string | undefined>();
   const [modalInitialPrice, setModalInitialPrice] = useState<number | undefined>();
   const [activeToast, setActiveToast] = useState<{ message: string; type: 'success' | 'alert' } | null>(null);
@@ -64,6 +85,15 @@ export function App() {
       console.warn('Error al guardar alertas en localStorage:', e);
     }
   }, [alerts]);
+
+  // Guardar preferencias de orden y visibilidad
+  useEffect(() => {
+    try {
+      localStorage.setItem(CARD_PREFS_KEY, JSON.stringify(cardPrefs));
+    } catch (e) {
+      console.warn('Error guardando preferencias de tarjetas:', e);
+    }
+  }, [cardPrefs]);
 
   const showToast = (message: string, type: 'success' | 'alert' = 'success') => {
     setActiveToast({ message, type });
@@ -109,7 +139,6 @@ export function App() {
   // Manejador de temporizador y Page Visibility API
   useEffect(() => {
     countdownIntervalRef.current = setInterval(() => {
-      // Si la pestaña está oculta, no actualizamos el contador para ahorrar recursos
       if (document.hidden) return;
 
       setCountdown(prev => {
@@ -123,7 +152,6 @@ export function App() {
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        // Al volver a la pestaña, si pasaron más de 120 segundos desde la última petición, recargar
         const elapsed = (Date.now() - lastFetchTimeRef.current) / 1000;
         if (elapsed >= REFRESH_INTERVAL_SECONDS) {
           loadRates(true);
@@ -176,19 +204,95 @@ export function App() {
     }
   };
 
-  // Filtrado de las tarjetas más relevantes primero (Blue, Oficial, MEP, CCL, Mayorista, Cripto)
-  const sortedRates = [...rates].sort((a, b) => {
-    const priority: Record<string, number> = {
-      blue: 1,
-      oficial: 2,
-      bolsa: 3,
-      contadoconliqui: 4,
-      cripto: 5,
-      mayorista: 6,
-      tarjeta: 7,
-    };
-    return (priority[a.casa.toLowerCase()] || 99) - (priority[b.casa.toLowerCase()] || 99);
-  });
+  // Drag and Drop Handlers
+  const handleDragStart = (e: React.DragEvent, casa: string) => {
+    setDraggedCasa(casa.toLowerCase());
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnter = (e: React.DragEvent, targetCasa: string) => {
+    e.preventDefault();
+    const source = draggedCasa;
+    const target = targetCasa.toLowerCase();
+    if (!source || source === target) return;
+
+    setCardPrefs(prev => {
+      const currentOrder = [...prev.order];
+      rates.forEach(r => {
+        const k = r.casa.toLowerCase();
+        if (!currentOrder.includes(k)) currentOrder.push(k);
+      });
+
+      const sourceIdx = currentOrder.indexOf(source);
+      const targetIdx = currentOrder.indexOf(target);
+      if (sourceIdx === -1 || targetIdx === -1) return prev;
+
+      currentOrder.splice(sourceIdx, 1);
+      currentOrder.splice(targetIdx, 0, source);
+
+      return {
+        ...prev,
+        order: currentOrder,
+      };
+    });
+  };
+
+  const handleDragEnd = () => {
+    setDraggedCasa(null);
+  };
+
+  const handleHideCard = (casa: string) => {
+    const k = casa.toLowerCase();
+    setCardPrefs(prev => ({
+      ...prev,
+      hidden: prev.hidden.includes(k) ? prev.hidden : [...prev.hidden, k],
+    }));
+    const rateName = rates.find(r => r.casa.toLowerCase() === k)?.nombre || casa;
+    showToast(`Dólar ${rateName} ocultado. Pulsa "Personalizar" para restaurarlo.`);
+  };
+
+  const handleToggleVisibility = (casa: string) => {
+    const k = casa.toLowerCase();
+    setCardPrefs(prev => ({
+      ...prev,
+      hidden: prev.hidden.includes(k)
+        ? prev.hidden.filter(item => item !== k)
+        : [...prev.hidden, k],
+    }));
+  };
+
+  const handleResetLayout = () => {
+    setCardPrefs({ order: DEFAULT_ORDER, hidden: [] });
+    showToast('Orden y visibilidad restablecidos.');
+  };
+
+  // Filtrado y ordenamiento interactivo según preferencias del usuario
+  const displayedRates = useMemo(() => {
+    if (!rates.length) return [];
+    const ratesMap = new Map(rates.map(r => [r.casa.toLowerCase(), r]));
+
+    const fullOrder = [...cardPrefs.order];
+    rates.forEach(r => {
+      const k = r.casa.toLowerCase();
+      if (!fullOrder.includes(k)) fullOrder.push(k);
+    });
+
+    const ordered: DolarRate[] = [];
+    fullOrder.forEach(k => {
+      if (!cardPrefs.hidden.includes(k) && ratesMap.has(k)) {
+        ordered.push(ratesMap.get(k)!);
+      }
+    });
+
+    return ordered;
+  }, [rates, cardPrefs]);
+
+  const hiddenCount = cardPrefs.hidden.length;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#070b14] text-slate-100">
@@ -234,13 +338,45 @@ export function App() {
 
         {/* Grilla de Tarjetas de Cotizaciones */}
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base sm:text-lg font-bold text-slate-200">
-              Cotizaciones Principales
-            </h3>
-            <span className="text-xs text-slate-400 font-mono">
-              {rates.length > 0 ? `${rates.length} mercados activos` : ''}
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-slate-200">
+                Cotizaciones Principales
+              </h3>
+              <span className="text-xs text-slate-500 font-mono hidden sm:inline">
+                ({displayedRates.length} activas)
+              </span>
+            </div>
+
+            {/* Controles de Personalización & Reordenamiento */}
+            <div className="flex items-center gap-2">
+              {hiddenCount > 0 && (
+                <button
+                  onClick={() => setIsCustomizeModalOpen(true)}
+                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
+                >
+                  {hiddenCount} {hiddenCount === 1 ? 'oculta' : 'ocultas'}
+                </button>
+              )}
+
+              <button
+                onClick={() => setIsCustomizeModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-colors"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Personalizar</span>
+              </button>
+
+              {(hiddenCount > 0 || JSON.stringify(cardPrefs.order) !== JSON.stringify(DEFAULT_ORDER)) && (
+                <button
+                  onClick={handleResetLayout}
+                  title="Restablecer orden y visibilidad por defecto"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
           {loading ? (
@@ -256,15 +392,31 @@ export function App() {
                 </div>
               ))}
             </div>
+          ) : displayedRates.length === 0 ? (
+            <div className="p-8 text-center rounded-2xl bg-slate-900/40 border border-dashed border-slate-800">
+              <p className="text-sm text-slate-400 mb-3">Has ocultado todas las cotizaciones.</p>
+              <button
+                onClick={handleResetLayout}
+                className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl transition-all"
+              >
+                Mostrar todas de nuevo
+              </button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {sortedRates.map(rate => (
+              {displayedRates.map(rate => (
                 <DollarCard
                   key={rate.casa}
                   rate={rate}
                   isPopular={rate.casa.toLowerCase() === 'blue' || rate.casa.toLowerCase() === 'oficial'}
                   onSetAlert={handleOpenAlertForCard}
                   onSelectForConvert={handleScrollToConverter}
+                  onHideCard={handleHideCard}
+                  isDragging={draggedCasa === rate.casa.toLowerCase()}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragEnter}
+                  onDragEnd={handleDragEnd}
                 />
               ))}
             </div>
@@ -293,6 +445,16 @@ export function App() {
         onToggleAlert={handleToggleAlert}
         initialCasa={modalInitialCasa}
         initialPrice={modalInitialPrice}
+      />
+
+      {/* Modal de Personalización (Mostrar / Ocultar / Reordenar) */}
+      <CustomizeModal
+        isOpen={isCustomizeModalOpen}
+        onClose={() => setIsCustomizeModalOpen(false)}
+        allRates={rates}
+        hiddenCasas={cardPrefs.hidden}
+        onToggleVisibility={handleToggleVisibility}
+        onResetLayout={handleResetLayout}
       />
 
     </div>

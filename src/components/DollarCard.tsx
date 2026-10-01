@@ -1,19 +1,32 @@
 import React from 'react';
 import { DolarRate } from '../types';
-import { BellPlus, TrendingUp, DollarSign } from 'lucide-react';
+import { BellPlus, TrendingUp, DollarSign, GripVertical, EyeOff } from 'lucide-react';
 
 interface DollarCardProps {
   rate: DolarRate;
   onSetAlert: (casa: string, nombre: string, currentPrice: number) => void;
   onSelectForConvert: (casa: string) => void;
+  onHideCard?: (casa: string) => void;
   isPopular?: boolean;
+  // Drag and Drop props
+  isDragging?: boolean;
+  onDragStart?: (e: React.DragEvent, casa: string) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDragEnter?: (e: React.DragEvent, casa: string) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
 }
 
 export const DollarCard: React.FC<DollarCardProps> = ({
   rate,
   onSetAlert,
   onSelectForConvert,
+  onHideCard,
   isPopular,
+  isDragging,
+  onDragStart,
+  onDragOver,
+  onDragEnter,
+  onDragEnd,
 }) => {
   const formatCurrency = (val: number | null) => {
     if (val === null || typeof val === 'undefined') return '—';
@@ -86,7 +99,16 @@ export const DollarCard: React.FC<DollarCardProps> = ({
 
   return (
     <div
-      className={`group relative rounded-2xl bg-[#0e1526]/80 backdrop-blur-md p-5 sm:p-6 border ${scheme.border} transition-all duration-300 hover:shadow-2xl hover:shadow-cyan-950/40 hover:-translate-y-1 flex flex-col justify-between overflow-hidden`}
+      draggable
+      onDragStart={e => onDragStart?.(e, rate.casa)}
+      onDragOver={onDragOver}
+      onDragEnter={e => onDragEnter?.(e, rate.casa)}
+      onDragEnd={onDragEnd}
+      className={`group relative rounded-2xl bg-[#0e1526]/80 backdrop-blur-md p-5 sm:p-6 border ${
+        scheme.border
+      } transition-all duration-200 hover:shadow-2xl hover:shadow-cyan-950/40 flex flex-col justify-between overflow-hidden cursor-grab active:cursor-grabbing ${
+        isDragging ? 'opacity-40 scale-95 border-dashed border-cyan-400 ring-2 ring-cyan-500/30' : ''
+      }`}
     >
       {/* Resplandor sutil de fondo */}
       <div
@@ -94,35 +116,65 @@ export const DollarCard: React.FC<DollarCardProps> = ({
       />
 
       <div>
-        {/* Cabecera de la tarjeta */}
+        {/* Cabecera de la tarjeta con Grip y Botones de Acción */}
         <div className="flex items-start justify-between gap-2 mb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${scheme.badge}`}>
-                Dólar {rate.nombre}
-              </span>
-              {isPopular && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                  ★ Popular
+          <div className="flex items-center gap-2">
+            {/* Grip handle visual */}
+            <span
+              title="Arrastra para reordenar esta cotización"
+              className="text-slate-600 group-hover:text-slate-400 transition-colors p-0.5 cursor-grab"
+            >
+              <GripVertical className="w-4 h-4" />
+            </span>
+
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${scheme.badge}`}>
+                  Dólar {rate.nombre}
                 </span>
+                {isPopular && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    ★ Popular
+                  </span>
+                )}
+              </div>
+              {rate.brechaConOficial !== undefined && rate.brechaConOficial > 0 && (
+                <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3 text-cyan-400 inline" />
+                  Brecha vs Oficial: <span className="font-semibold text-cyan-300">+{rate.brechaConOficial}%</span>
+                </p>
               )}
             </div>
-            {rate.brechaConOficial !== undefined && rate.brechaConOficial > 0 && (
-              <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
-                <TrendingUp className="w-3 h-3 text-cyan-400 inline" />
-                Brecha vs Oficial: <span className="font-semibold text-cyan-300">+{rate.brechaConOficial}%</span>
-              </p>
-            )}
           </div>
 
-          {/* Botón rápido para configurar alerta */}
-          <button
-            onClick={() => onSetAlert(rate.casa, rate.nombre, rate.venta)}
-            title={`Crear alerta para Dólar ${rate.nombre}`}
-            className="p-2 rounded-xl bg-slate-800/80 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 border border-slate-700/60 hover:border-cyan-500/40 transition-all active:scale-95 shadow-sm"
-          >
-            <BellPlus className="w-4 h-4" />
-          </button>
+          {/* Botones de acción rápida: Ocultar y Alerta */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onHideCard && (
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  onHideCard(rate.casa);
+                }}
+                title={`Ocultar Dólar ${rate.nombre}`}
+                className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700/60 transition-all active:scale-95 shadow-sm"
+              >
+                <EyeOff className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={e => {
+                e.stopPropagation();
+                onSetAlert(rate.casa, rate.nombre, rate.venta);
+              }}
+              title={`Crear alerta para Dólar ${rate.nombre}`}
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 border border-slate-700/60 hover:border-cyan-500/40 transition-all active:scale-95 shadow-sm"
+            >
+              <BellPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Precios Principales (Compra y Venta) */}
@@ -153,7 +205,11 @@ export const DollarCard: React.FC<DollarCardProps> = ({
           Act. {formatShortDate(rate.fechaActualizacion)}
         </span>
         <button
-          onClick={() => onSelectForConvert(rate.casa)}
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            onSelectForConvert(rate.casa);
+          }}
           className="text-slate-400 hover:text-cyan-300 font-medium flex items-center gap-1 hover:underline transition-colors"
         >
           <DollarSign className="w-3 h-3" /> Convertir
