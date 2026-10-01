@@ -7,7 +7,7 @@ import { HistoricalChart } from './components/HistoricalChart';
 import { Converter } from './components/Converter';
 import { AlertsModal } from './components/AlertsModal';
 import { Footer } from './components/Footer';
-import { AlertCircle, CheckCircle, BellRing, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle, BellRing } from 'lucide-react';
 
 const REFRESH_INTERVAL_SECONDS = 120; // 2 minutos
 const ALERTS_STORAGE_KEY = 'dolar_argentina_alerts_v1';
@@ -222,24 +222,7 @@ export function App() {
       )}
 
       {/* Contenido Principal */}
-      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-10">
-        
-        {/* Banner de Bienvenida / Hero */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-cyan-950/40 via-blue-950/20 to-slate-900/50 border border-slate-800/80 p-6 sm:p-10 backdrop-blur-md shadow-2xl">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-          
-          <div className="relative z-10 max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 mb-3">
-              <Sparkles className="w-3.5 h-3.5" /> Mercado Financiero Argentino
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
-              Monitorea el valor del dólar en <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">tiempo real</span>
-            </h2>
-            <p className="mt-2 text-sm sm:text-base text-slate-300 leading-relaxed">
-              Consulta las principales cotizaciones del país, analiza históricos interactivos y programa alertas automáticas con sonido cuando el dólar suba o baje.
-            </p>
-          </div>
-        </div>
+      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-8">
 
         {/* Mensaje de Error si la API falla */}
         {error && (
